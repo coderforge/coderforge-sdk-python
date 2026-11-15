@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools==75.8.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coderforge-cloud-sdk"
+version = "0.1.1"
+description = "CloudBuilder Function capabilities and HTTP routing for Python and Pyodide"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "CoderForge.org Ltd" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["coderforge.cloud.sdk*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"coderforge.cloud.sdk" = ["py.typed"]
+
+[project.urls]
+Source = "https://git.coderforge.org/coderforge/coderforge-sdk-python"
+Issues = "https://git.coderforge.org/coderforge/coderforge-sdk-python/issues"

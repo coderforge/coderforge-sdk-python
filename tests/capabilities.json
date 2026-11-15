@@ -1,0 +1,11 @@
+{
+  "function_rid": "ita-x1.cloud.coderforge.org:s1:fnc:0021",
+  "secret_rid": "ita-x1.cloud.coderforge.org:s1:secret:0001",
+  "requests": [
+    {"version":1,"operation":"functions.invoke","arguments":{"rid":"ita-x1.cloud.coderforge.org:s1:fnc:0021","event":{"message":"hello","count":2},"timeout_ms":1500}},
+    {"version":1,"operation":"messaging.publish","arguments":{"topic":"documents.ready","value":{"document":"test.pdf"},"key":"document-1","idempotency_key":"request-1"}},
+    {"version":1,"operation":"secrets.get","arguments":{"rid":"ita-x1.cloud.coderforge.org:s1:secret:0001","key":"API_KEY"}}
+  ],
+  "values": [{"processed":true},{"topic":"documents.ready","partition":0,"offset":"42"},"test-only-secret"],
+  "denied": {"ok":false,"error":{"code":"FORBIDDEN","message":"Capability refused","retryable":false}}
+}
