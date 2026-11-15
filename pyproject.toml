@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "coderforge-cloud-sdk"
-version = "0.1.1"
+version = "1.0.0"
 description = "CloudBuilder Function capabilities and HTTP routing for Python and Pyodide"
 readme = "README.md"
 requires-python = ">=3.12"

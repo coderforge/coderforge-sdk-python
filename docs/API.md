@@ -5,7 +5,7 @@ with PHP, JavaScript and compiled TypeScript. Warm non-writing requests do not
 wait on VFS; source updates invalidate application modules between invocations.
 Writes retain version-checked, acknowledged atomic commits. See the contract for freshness and conflicts.
 
-Version0.1.1 API; protocol v1. MIT, copyright 2026 CoderForge.org Ltd.
+Version 1.0.0 API; protocol v1. MIT, copyright 2026 CoderForge.org Ltd.
 
 Distribution: `coderforge-cloud-sdk`. Import: `coderforge.cloud.sdk`.
 Python >=3.12, pure Python, no runtime dependencies. Namespace packages let

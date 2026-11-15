@@ -4,7 +4,7 @@ from .client import Client, SdkError, Secret, json_transport
 from .http import HttpError, Request, Response, Router
 from .wsgi import WsgiAdapter
 
-__version__ = "0.1.1"
+__version__ = "1.0.0"
 __all__ = [
     "Client",
     "SdkError",
