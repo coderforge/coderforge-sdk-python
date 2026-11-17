@@ -1,0 +1,114 @@
+name: Publish Python SDK to PyPI
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Immutable SDK release tag
+        required: true
+        default: v1.0.0
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
+
+jobs:
+  build:
+    if: github.repository == 'coderforge/coderforge-sdk-python' && (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check release identity
+        run: |
+          python3 - <<'PY'
+          import os, re
+          assert re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', os.environ['RELEASE_TAG']), 'A stable version tag is required'
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install release tools
+        run: python -m pip install --disable-pip-version-check --index-url https://pypi.org/simple build==1.2.2.post1 twine==7.0.0
+      - name: Download the original verified 1.0.0 archives
+        if: env.RELEASE_TAG == 'v1.0.0'
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib, urllib.request
+          files = {
+              'coderforge_cloud_sdk-1.0.0-py3-none-any.whl': 'e474cb627c149712a07a62a836cb7d2400869272d6a22e5458744a4e8803383a',
+              'coderforge_cloud_sdk-1.0.0.tar.gz': '56da3e5a011637ebc42c20362987dea8db57b7edcde5b6ad50677e8f0a4ef564',
+          }
+          pathlib.Path('dist').mkdir()
+          for name, digest in files.items():
+              url = 'https://github.com/coderforge/coderforge-sdk-python/releases/download/v1.0.0/' + name
+              with urllib.request.urlopen(url, timeout=60) as response:
+                  data = response.read(5_000_001)
+              assert len(data) <= 5_000_000 and hashlib.sha256(data).hexdigest() == digest, 'Original archive integrity check failed'
+              (pathlib.Path('dist') / name).write_bytes(data)
+          PY
+      - name: Build subsequent tagged releases
+        if: env.RELEASE_TAG != 'v1.0.0'
+        run: python -m build
+      - name: Verify package identity, version and MIT license
+        run: |
+          python - <<'PY'
+          from email.parser import BytesParser
+          import os, pathlib, tarfile, tomllib, zipfile
+          project = tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']
+          version = os.environ['RELEASE_TAG'][1:]
+          assert project['name'] == 'coderforge-cloud-sdk' and project['version'] == version
+          license_body = pathlib.Path('LICENSE').read_bytes()
+          paths = sorted(pathlib.Path('dist').iterdir())
+          assert len(paths) == 2 and sum(p.suffix == '.whl' for p in paths) == 1
+          for path in paths:
+              if path.suffix == '.whl':
+                  with zipfile.ZipFile(path) as archive:
+                      files = {name: archive.read(name) for name in archive.namelist() if not name.endswith('/')}
+              else:
+                  assert path.name.endswith('.tar.gz')
+                  with tarfile.open(path, 'r:gz') as archive:
+                      files = {member.name: archive.extractfile(member).read() for member in archive.getmembers() if member.isfile()}
+              metadata = BytesParser().parsebytes(next(body for name, body in files.items() if name.endswith(('/METADATA', '/PKG-INFO'))))
+              assert metadata['Name'] == 'coderforge-cloud-sdk' and metadata['Version'] == version
+              assert 'MIT License' in str(metadata.get_all('Classifier'))
+              assert any(pathlib.PurePosixPath(name).name == 'LICENSE' and body == license_body for name, body in files.items())
+          PY
+          python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-distributions
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/coderforge-cloud-sdk/
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-distributions
+          path: dist
+      - name: Publish with the PyPI trusted identity
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist/
+          skip-existing: false
